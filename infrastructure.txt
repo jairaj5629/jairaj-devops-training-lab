@@ -1,1 +1,2 @@
 Terraform Infrastructure v1
+Added Azure VM configuration
