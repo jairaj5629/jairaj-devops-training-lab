@@ -1,2 +1,3 @@
 Terraform Infrastructure v1
 Added Azure VM configuration
+Added new subnet configuration
