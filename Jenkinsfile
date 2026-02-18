@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        BUILD_VERSION = "2.0.${BUILD_NUMBER}"
+       # BUILD_VERSION = "2.0.${BUILD_NUMBER}"
+        BUILD_VERSION = "3.0.${BUILD_NUMBER}"
     }
 
     stages {
