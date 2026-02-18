@@ -1,0 +1,95 @@
+pipeline {
+    agent any
+
+    options {
+        skipDefaultCheckout(true)
+    }
+
+    parameters {
+        booleanParam(
+            name: 'RUN_BUILD',
+            defaultValue: true,
+            description: 'Execute Maven build step?'
+        )
+
+        string(
+            name: 'CUSTOM_VERSION',
+            defaultValue: '',
+            description: 'Optional custom version (leave empty for auto version)'
+        )
+
+        choice(
+            name: 'DEPLOY_ENV',
+            choices: ['dev', 'qa', 'prod'],
+            description: 'Select deployment environment'
+        )
+    }
+
+    environment {
+        BUILD_VERSION = "${params.CUSTOM_VERSION ?: "1.0.${env.BUILD_NUMBER}"}"
+        ARTIFACTORY_URL = "http://20.109.57.182:8082/artifactory/raman-dev-local"
+    }
+
+    stages {
+
+        stage('Prepare Workspace') {
+            steps {
+                cleanWs()
+                checkout scm
+            }
+        }
+
+        stage('Initialize') {
+            steps {
+                echo "Starting CI Build..."
+                echo "Selected Environment: ${params.DEPLOY_ENV}"
+                echo "Build Version: ${BUILD_VERSION}"
+            }
+        }
+
+        stage('Build') {
+            when {
+                expression { return params.RUN_BUILD }
+            }
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Archive Artifact') {
+            when {
+                expression { return params.RUN_BUILD }
+            }
+            steps {
+                sh """
+                    mkdir -p ramanbuild2
+                    mv target/devops.war ramanbuild2/devops-${BUILD_VERSION}.war
+                """
+            }
+        }
+
+        stage('Upload to Artifactory') {
+            when {
+                expression { return params.RUN_BUILD }
+            }
+            steps {
+                withCredentials([string(credentialsId: 'artifactory-api-key', variable: 'ART_API_KEY')]) {
+                    sh """
+                        curl -H "X-JFrog-Art-Api: ${ART_API_KEY}" \
+                             -T ramanbuild2/devops-${BUILD_VERSION}.war \
+                             ${ARTIFACTORY_URL}/devops-${BUILD_VERSION}.war
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Artifact uploaded successfully."
+        }
+        failure {
+            echo "Pipeline failed."
+        }
+    }
+}
