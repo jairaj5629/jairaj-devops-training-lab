@@ -1,5 +1,9 @@
 pipeline {
     agent any
+    
+    triggers {
+        cron('H/2 * * * *')
+    }
 
     environment {
         BUILD_VERSION = "3.0.${BUILD_NUMBER}"
